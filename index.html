@@ -591,7 +591,7 @@ input[type=file]{display:none}
         <div class="scan-layout">
           <!-- Left: camera -->
           <div>
-            <div class="camera-zone" id="camera-zone" onclick="document.getElementById('file-input').click()">
+            <div class="camera-zone" id="camera-zone" onclick="triggerCamera()">
               <div class="camera-icon">📷</div>
               <div class="camera-hint">
                 <strong>Fotografiază coperta sau pagina de titlu</strong>
@@ -599,7 +599,12 @@ input[type=file]{display:none}
               </div>
               <img id="preview-img" style="display:none">
             </div>
-            <input type="file" id="file-input" accept="image/*" capture="environment">
+            <input type="file" id="file-input" accept="image/*" style="display:none">
+            <input type="file" id="file-input-gallery" accept="image/*" style="display:none">
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="btn btn-outline" onclick="document.getElementById('file-input').click()" style="font-size:13px;padding:10px">📷 Cameră</button>
+              <button class="btn btn-outline" onclick="document.getElementById('file-input-gallery').click()" style="font-size:13px;padding:10px">🖼️ Galerie</button>
+            </div>
             <div class="loading" id="loading">
               <div class="spinner"></div>
               <div class="loading-text">AI-ul analizează cartea...</div>
@@ -793,8 +798,8 @@ function switchTab(tab) {
 }
 
 // ── IMAGE HANDLING ──
-document.getElementById('file-input').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
+function handleFileSelect(e) {
+  const file = e.target.files && e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = (ev) => {
@@ -802,10 +807,20 @@ document.getElementById('file-input').addEventListener('change', async (e) => {
     img.src = ev.target.result;
     img.style.display = 'block';
     document.getElementById('form-empty').style.display = 'none';
+    document.getElementById('fields').classList.remove('show');
     analyzeImage(ev.target.result);
   };
+  reader.onerror = () => {
+    document.getElementById('loading').classList.remove('show');
+    showStatus('Eroare la citirea imaginii. Incearca din nou.', 'error');
+    document.getElementById('fields').classList.add('show');
+  };
   reader.readAsDataURL(file);
-});
+  e.target.value = '';
+}
+
+document.getElementById('file-input').addEventListener('change', handleFileSelect);
+document.getElementById('file-input-gallery').addEventListener('change', handleFileSelect);
 
 async function analyzeImage(dataUrl) {
   document.getElementById('loading').classList.add('show');
