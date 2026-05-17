@@ -831,28 +831,36 @@ async function analyzeImage(dataUrl) {
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
       {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
           contents:[{parts:[
             {inline_data:{mime_type:mimeType, data:base64}},
-            {text:`Analizează această imagine a unei cărți (copertă sau pagina de titlu) și extrage toate informațiile disponibile.
-Răspunde DOAR cu un JSON valid, fără text suplimentar, fără markdown:
+            {text:`Analizeaza aceasta imagine a unei carti si extrage informatiile.
+Raspunde DOAR cu JSON valid, fara text, fara markdown, fara explicatii:
 {"titlu":"...","autor":"...","traducator":null,"editura":null,"editor":null,"an":null,"editie":null,"isbn":null,"limba_originala":null,"gen":null}
-Dacă nu poți identifica o informație, pune null. Nu inventa date.`}
+Daca nu gasesti o informatie pune null.`}
           ]}]
         })
       }
     );
     const data = await res.json();
+    if (data.error) {
+      throw new Error('Gemini: ' + data.error.message);
+    }
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
     const clean = text.replace(/```json|```/g,'').trim();
-    const info = JSON.parse(clean);
+    let info;
+    try { info = JSON.parse(clean); }
+    catch(pe) {
+      const match = clean.match(/\{[\s\S]*\}/);
+      info = match ? JSON.parse(match[0]) : {};
+    }
     fillForm(info);
   } catch(err) {
-    showStatus('Eroare la analizare. Completează manual câmpurile.', 'error');
+    showStatus('Eroare: ' + err.message, 'error');
     document.getElementById('fields').classList.add('show');
   } finally {
     document.getElementById('loading').classList.remove('show');
